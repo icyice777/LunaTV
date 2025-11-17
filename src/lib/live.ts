@@ -1,9 +1,11 @@
 /* eslint-disable no-constant-condition */
 
-import { getConfig } from "@/lib/config";
-import { db } from "@/lib/db";
+import * as crypto from 'crypto';
 
-const defaultUA = 'AptvPlayer/1.4.10'
+import { getConfig } from '@/lib/config';
+import { db } from '@/lib/db';
+
+const defaultUA = 'AptvPlayer/1.4.10';
 
 export interface LiveChannels {
   channelNumber: number;
@@ -31,10 +33,12 @@ export function deleteCachedLiveChannels(key: string) {
   delete cachedLiveChannels[key];
 }
 
-export async function getCachedLiveChannels(key: string): Promise<LiveChannels | null> {
+export async function getCachedLiveChannels(
+  key: string
+): Promise<LiveChannels | null> {
   if (!cachedLiveChannels[key]) {
     const config = await getConfig();
-    const liveInfo = config.LiveConfig?.find(live => live.key === key);
+    const liveInfo = config.LiveConfig?.find((live) => live.key === key);
     if (!liveInfo) {
       return null;
     }
@@ -48,11 +52,28 @@ export async function getCachedLiveChannels(key: string): Promise<LiveChannels |
   return cachedLiveChannels[key] || null;
 }
 
+function decryptM3u(passwordStr: string, data: Uint8Array): string {
+  try {
+    const [password, saltHex, ivHex, iterationArg] = passwordStr.split('|');
+    const iv = Buffer.from(ivHex, 'hex');
+    const salt = Buffer.from(saltHex, 'hex');
+    const iterations = parseInt(iterationArg, 10) || 1024;
+    const key = crypto.pbkdf2Sync(password, salt, iterations, 32, 'sha256');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    let decrypted = decipher.update(data, undefined, 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (error) {
+    return '';
+  }
+}
+
 export async function refreshLiveChannels(liveInfo: {
   key: string;
   name: string;
   url: string;
   ua?: string;
+  dp?: string; // M3U解密密码参数
   epg?: string;
   from: 'config' | 'custom';
   channelNumber?: number;
@@ -62,15 +83,22 @@ export async function refreshLiveChannels(liveInfo: {
     delete cachedLiveChannels[liveInfo.key];
   }
   const ua = liveInfo.ua || defaultUA;
+  const passwordStr = liveInfo.dp || '';
   const response = await fetch(liveInfo.url, {
     headers: {
       'User-Agent': ua,
     },
   });
-  const data = await response.text();
+  const data = passwordStr
+    ? decryptM3u(passwordStr, new Uint8Array(await response.arrayBuffer()))
+    : await response.text();
   const result = parseM3U(liveInfo.key, data);
   const epgUrl = liveInfo.epg || result.tvgUrl;
-  const epgs = await parseEpg(epgUrl, liveInfo.ua || defaultUA, result.channels.map(channel => channel.tvgId).filter(tvgId => tvgId));
+  const epgs = await parseEpg(
+    epgUrl,
+    liveInfo.ua || defaultUA,
+    result.channels.map((channel) => channel.tvgId).filter((tvgId) => tvgId)
+  );
   cachedLiveChannels[liveInfo.key] = {
     channelNumber: result.channels.length,
     channels: result.channels,
@@ -80,19 +108,25 @@ export async function refreshLiveChannels(liveInfo: {
   return result.channels.length;
 }
 
-async function parseEpg(epgUrl: string, ua: string, tvgIds: string[]): Promise<{
+async function parseEpg(
+  epgUrl: string,
+  ua: string,
+  tvgIds: string[]
+): Promise<{
   [key: string]: {
     start: string;
     end: string;
     title: string;
-  }[]
+  }[];
 }> {
   if (!epgUrl) {
     return {};
   }
 
   const tvgs = new Set(tvgIds);
-  const result: { [key: string]: { start: string; end: string; title: string }[] } = {};
+  const result: {
+    [key: string]: { start: string; end: string; title: string }[];
+  } = {};
 
   try {
     const response = await fetch(epgUrl, {
@@ -113,7 +147,8 @@ async function parseEpg(epgUrl: string, ua: string, tvgIds: string[]): Promise<{
     const decoder = new TextDecoder();
     let buffer = '';
     let currentTvgId = '';
-    let currentProgram: { start: string; end: string; title: string } | null = null;
+    let currentProgram: { start: string; end: string; title: string } | null =
+      null;
     let shouldSkipCurrentProgram = false;
 
     while (true) {
@@ -152,9 +187,15 @@ async function parseEpg(epgUrl: string, ua: string, tvgIds: string[]): Promise<{
           }
         }
         // 解析 <title> 标签 - 只有在需要解析当前节目时才处理
-        else if (trimmedLine.startsWith('<title') && currentProgram && !shouldSkipCurrentProgram) {
+        else if (
+          trimmedLine.startsWith('<title') &&
+          currentProgram &&
+          !shouldSkipCurrentProgram
+        ) {
           // 处理带有语言属性的title标签，如 <title lang="zh">远方的家2025-60</title>
-          const titleMatch = trimmedLine.match(/<title(?:\s+[^>]*)?>(.*?)<\/title>/);
+          const titleMatch = trimmedLine.match(
+            /<title(?:\s+[^>]*)?>(.*?)<\/title>/
+          );
           if (titleMatch && currentProgram) {
             currentProgram.title = titleMatch[1];
 
@@ -187,7 +228,10 @@ async function parseEpg(epgUrl: string, ua: string, tvgIds: string[]): Promise<{
  * @param m3uContent M3U文件的内容字符串
  * @returns 频道信息数组
  */
-function parseM3U(sourceKey: string, m3uContent: string): {
+function parseM3U(
+  sourceKey: string,
+  m3uContent: string
+): {
   tvgUrl: string;
   channels: {
     id: string;
@@ -207,7 +251,10 @@ function parseM3U(sourceKey: string, m3uContent: string): {
     url: string;
   }[] = [];
 
-  const lines = m3uContent.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  const lines = m3uContent
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 
   let tvgUrl = '';
   let channelIndex = 0;
@@ -259,7 +306,7 @@ function parseM3U(sourceKey: string, m3uContent: string): {
             name,
             logo,
             group,
-            url
+            url,
           });
           channelIndex++;
         }
@@ -277,7 +324,10 @@ function parseM3U(sourceKey: string, m3uContent: string): {
 export function resolveUrl(baseUrl: string, relativePath: string) {
   try {
     // 如果已经是完整的 URL，直接返回
-    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+    if (
+      relativePath.startsWith('http://') ||
+      relativePath.startsWith('https://')
+    ) {
       return relativePath;
     }
 
@@ -311,8 +361,8 @@ function fallbackUrlResolve(baseUrl: string, relativePath: string) {
     return `${urlObj.protocol}//${urlObj.host}${relativePath}`;
   } else if (relativePath.startsWith('../')) {
     // 上级目录相对路径 (../path/to/file)
-    const segments = base.split('/').filter(s => s);
-    const relativeSegments = relativePath.split('/').filter(s => s);
+    const segments = base.split('/').filter((s) => s);
+    const relativeSegments = relativePath.split('/').filter((s) => s);
 
     for (const segment of relativeSegments) {
       if (segment === '..') {
@@ -326,7 +376,9 @@ function fallbackUrlResolve(baseUrl: string, relativePath: string) {
     return `${urlObj.protocol}//${urlObj.host}/${segments.join('/')}`;
   } else {
     // 当前目录相对路径 (file.ts 或 ./file.ts)
-    const cleanRelative = relativePath.startsWith('./') ? relativePath.slice(2) : relativePath;
+    const cleanRelative = relativePath.startsWith('./')
+      ? relativePath.slice(2)
+      : relativePath;
     return base + cleanRelative;
   }
 }
@@ -337,11 +389,14 @@ export function getBaseUrl(m3u8Url: string) {
     const url = new URL(m3u8Url);
     // 如果 URL 以 .m3u8 结尾，移除文件名
     if (url.pathname.endsWith('.m3u8')) {
-      url.pathname = url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
+      url.pathname = url.pathname.substring(
+        0,
+        url.pathname.lastIndexOf('/') + 1
+      );
     } else if (!url.pathname.endsWith('/')) {
       url.pathname += '/';
     }
-    return url.protocol + "//" + url.host + url.pathname;
+    return url.protocol + '//' + url.host + url.pathname;
   } catch (error) {
     return m3u8Url.endsWith('/') ? m3u8Url : m3u8Url + '/';
   }

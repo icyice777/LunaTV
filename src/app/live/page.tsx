@@ -43,6 +43,7 @@ interface LiveSource {
   name: string;
   url: string;  // m3u 地址
   ua?: string;
+  dp?: string; // 自定义M3U解密密码参数
   epg?: string; // 节目单
   from: 'config' | 'custom';
   channelNumber?: number;

@@ -285,6 +285,7 @@ interface LiveDataSource {
   key: string;
   url: string;
   ua?: string;
+  dp?: string;
   epg?: string;
   channelNumber?: number;
   disabled?: boolean;
@@ -3956,6 +3957,7 @@ const LiveSourceConfig = ({
     key: '',
     url: '',
     ua: '',
+    dp: '',
     epg: '',
     disabled: false,
     from: 'custom',
@@ -4060,6 +4062,7 @@ const LiveSourceConfig = ({
         name: newLiveSource.name,
         url: newLiveSource.url,
         ua: newLiveSource.ua,
+        dp: newLiveSource.dp,
         epg: newLiveSource.epg,
       });
       setNewLiveSource({
@@ -4068,6 +4071,7 @@ const LiveSourceConfig = ({
         url: '',
         epg: '',
         ua: '',
+        dp: '',
         disabled: false,
         from: 'custom',
       });
@@ -4086,6 +4090,7 @@ const LiveSourceConfig = ({
         name: editingLiveSource.name,
         url: editingLiveSource.url,
         ua: editingLiveSource.ua,
+        dp: editingLiveSource.dp,
         epg: editingLiveSource.epg,
       });
       setEditingLiveSource(null);
@@ -4165,6 +4170,12 @@ const LiveSourceConfig = ({
           title={liveSource.ua || '-'}
         >
           {liveSource.ua || '-'}
+        </td>
+        <td
+          className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 max-w-[8rem] truncate'
+          title={liveSource.dp || '-'}
+        >
+          {liveSource.dp || '-'}
         </td>
         <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center'>
           {liveSource.channelNumber && liveSource.channelNumber > 0 ? liveSource.channelNumber : '-'}
@@ -4296,6 +4307,15 @@ const LiveSourceConfig = ({
               }
               className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
             />
+            <input
+              type='text'
+              placeholder='自定义M3U解密密码参数（选填）'
+              value={newLiveSource.dp}
+              onChange={(e) =>
+                setNewLiveSource((prev) => ({ ...prev, dp: e.target.value }))
+              }
+              className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+            />
 
           </div>
           <div className='flex justify-end'>
@@ -4388,6 +4408,19 @@ const LiveSourceConfig = ({
                 className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
               />
             </div>
+            <div>
+              <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                自定义M3U解密密码参数（选填）
+              </label>
+              <input
+                type='text'
+                value={editingLiveSource.dp}
+                onChange={(e) =>
+                  setEditingLiveSource((prev) => prev ? ({ ...prev, dp: e.target.value }) : null)
+                }
+                className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+              />
+            </div>
           </div>
           <div className='flex justify-end space-x-2'>
             <button
@@ -4427,6 +4460,9 @@ const LiveSourceConfig = ({
               </th>
               <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                 自定义 UA
+              </th>
+              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                自定义M3U解密密码参数
               </th>
               <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                 频道数
