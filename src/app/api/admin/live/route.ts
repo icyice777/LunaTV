@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
+import { db } from '@/lib/db';
 import { deleteCachedLiveChannels, refreshLiveChannels } from '@/lib/live';
 
 export const runtime = 'nodejs';
@@ -170,6 +171,11 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json({ error: '未知操作' }, { status: 400 });
     }
+
+    // 保存配置
+    await db.saveAdminConfig(config);
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '操作失败' },
