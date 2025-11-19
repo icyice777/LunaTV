@@ -4309,13 +4309,18 @@ const LiveSourceConfig = ({
             />
             <input
               type='text'
-              placeholder='自定义M3U解密密码参数（选填）'
+              placeholder='自定义M3U解密参数（选填, 格式: password|saltHex|ivHex|iterations）'
               value={newLiveSource.dp}
               onChange={(e) =>
                 setNewLiveSource((prev) => ({ ...prev, dp: e.target.value }))
               }
               className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
             />
+            <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>
+            </label>
+            <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>
+              openssl加密参数: -e -aes-256-cbc -iv ivHex -pbkdf2 -pass pass:password -S saltHex -iter iterations -md sha256
+            </label>
 
           </div>
           <div className='flex justify-end'>
@@ -4410,7 +4415,7 @@ const LiveSourceConfig = ({
             </div>
             <div>
               <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>
-                自定义M3U解密密码参数（选填）
+                自定义M3U解密参数（选填, 格式: password|saltHex|ivHex|iterations）
               </label>
               <input
                 type='text'
@@ -4421,6 +4426,11 @@ const LiveSourceConfig = ({
                 className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
               />
             </div>
+            <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>
+            </label>
+            <label className='block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1'>
+              openssl加密参数: -e -aes-256-cbc -iv ivHex -pbkdf2 -pass pass:password -S saltHex -iter iterations -md sha256
+            </label>
           </div>
           <div className='flex justify-end space-x-2'>
             <button
@@ -4462,7 +4472,7 @@ const LiveSourceConfig = ({
                 自定义 UA
               </th>
               <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                自定义M3U解密密码参数
+                自定义M3U解密参数
               </th>
               <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                 频道数
